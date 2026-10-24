@@ -1,0 +1,72 @@
+{
+  "name": "dsh-three-pane",
+  "version": "0.3.0",
+  "description": "Independent left file explorer, center conversation, and native right preview for DeepSeek Harness.",
+  "author": "Wfssll",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wfssll/dsh-three-pane.git"
+  },
+  "homepage": "https://github.com/Wfssll/dsh-three-pane#readme",
+  "bugs": {
+    "url": "https://github.com/Wfssll/dsh-three-pane/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "sidebar",
+    "file-explorer",
+    "pdf",
+    "three-pane"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "docs/overview.png",
+    "docs/files-hidden.png"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.3 <0.3.0"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-sidebar-files"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "npm run build && npm test",
+    "prepack": "npm run check"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

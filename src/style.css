@@ -1,0 +1,89 @@
+/* Native file content and tabs retain their host styles; this plugin owns only
+   layout geometry and the independent folder toggle. */
+[data-dsh-native-files-center] {
+  position: relative;
+  box-sizing: border-box;
+  padding-inline-start: var(--dsh-native-files-width);
+  --dsh-frame-leading-clearance: 0px;
+}
+[data-dsh-native-files-frame] {
+  grid-template-columns: var(--dsh-files-history-track) minmax(var(--dsh-files-middle-min), 1fr) minmax(0px, var(--dsh-files-preview-track)) !important;
+  overflow-x: auto;
+}
+[data-dsh-native-files-frame] > [data-side=rightbar] {
+  left: calc(100% - var(--dsh-files-preview-track)) !important;
+}
+[data-dsh-files-leading] > [data-shell-leading] {
+  left: var(--dsh-files-leading-x) !important;
+  top: var(--dsh-files-leading-y) !important;
+}
+[data-dsh-files-leading] [data-dsh-native-files-left] [data-dockkit-strip] {
+  padding-inline-end: var(--dsh-files-leading-space, 116px);
+}
+html[data-platform=darwin]:not([data-fullscreen]) [data-dsh-files-leading] [data-dsh-native-files-left] [data-dockkit-strip] {
+  padding-inline-start: 88px;
+}
+html[data-platform=darwin] [data-dsh-files-button-frame][data-sidebar-collapsed] {
+  --dsh-frame-leading-clearance: 196px;
+}
+html[data-platform=darwin][data-fullscreen] [data-dsh-files-button-frame][data-sidebar-collapsed] {
+  --dsh-frame-leading-clearance: 120px;
+}
+[data-dsh-native-files-left] {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 12;
+  min-height: 0;
+}
+/* Sidebar chrome belongs exclusively to the right sidebar. */
+[data-dsh-native-files-left] [data-dockkit-split-button],
+[data-dsh-native-files-left] [data-dockkit-strip] > span:has([data-dockkit-split-button]),
+[data-dsh-native-files-left] [data-dockkit-strip-chrome],
+[data-dsh-native-files-left] [data-dockkit-add-tab] {
+  display: none !important;
+}
+[data-dsh-native-files-resize] {
+  position: absolute;
+  inset: 0 -4px 0 auto;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+[data-dsh-native-files-resize]:focus-visible {
+  outline: 1px solid var(--dsw-alias-border-l3);
+}
+.dsh-files-button-host {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-inline-end: 8px;
+  -webkit-app-region: no-drag;
+}
+[data-shell-leading] .dsh-files-button-host { margin-inline-end: 0; }
+.dsh-files-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dsw-radius-sm, 6px);
+  color: var(--dsw-alias-label-secondary, #737782);
+  background: transparent;
+  cursor: pointer;
+}
+.dsh-files-toggle:hover, .dsh-files-toggle[aria-expanded=true] {
+  color: var(--dsw-alias-label-primary, #222);
+  background: var(--dsw-alias-interactive-bg-hover, #eef0f4);
+}
+.dsh-files-toggle:disabled { opacity: .4; cursor: default; }
+.dsh-files-toggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); }
+[data-sidebar-collapsed] [data-slot=sidebar] div:has(> .dsh-files-button-host) {
+  flex-direction: column;
+  height: 68px;
+  gap: 4px;
+  overflow: visible;
+}
+[data-sidebar-collapsed] [data-slot=sidebar] .dsh-files-button-host { margin-inline-end: 0; }
