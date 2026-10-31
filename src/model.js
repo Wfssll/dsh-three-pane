@@ -110,3 +110,71 @@ export function paneWidths(viewport, history, preferred, preview, macLeading = f
   const right = Math.max(0, Math.min(preview, workspace - files - 400));
   return { files, preview: right, chat: Math.max(400, workspace - files - right) };
 }
+
+/** Composer reference from a workspace-relative path, without touching the filesystem. */
+export function relativeReference(relative, kind) {
+  if (typeof relative !== 'string') return undefined;
+  const cleaned = relative.replace(/^\.\/+/, '').replace(/\/+$/, '');
+  if (!cleaned || cleaned.length > 4096 || /[\\"\u0000-\u001f\u007f-\u009f]/u.test(cleaned)
+      || cleaned.split('/').some(part => !part || part === '.' || part === '..')) return undefined;
+  const path = `${cleaned}/`.replace(/\/+$/, kind === 'directory' ? '/' : '');
+  return { relative: cleaned, mention: /\s/u.test(path) ? `@"${path}"` : `@${path}`, kind,
+    label: cleaned.split('/').at(-1) + (kind === 'directory' ? '/' : '') };
+}
+
+/** Composer reference for an absolute path on the host, used when no workspace-relative spelling is available. */
+export function absoluteReference(path, kind = 'file') {
+  if (typeof path !== 'string' || !path.startsWith('/') || path.length > 4096) return undefined;
+  const cleaned = path.replace(/\/+$/, '');
+  if (!cleaned || /[\\"\u0000-\u001f\u007f-\u009f]/u.test(cleaned)) return undefined;
+  const label = cleaned.split('/').at(-1);
+  if (!label) return undefined;
+  const mention = /\s/u.test(cleaned) ? `@"${cleaned}"` : `@${cleaned}`;
+  return { relative: cleaned, mention, kind, label };
+}
+
+/** Composer reference for a tree entry: a path relative to the workspace root, or nothing if it lies outside. */
+export function fileReference(root, absolute, kind) {
+  const base = String(root || '').replace(/\/+$/, '');
+  if (!base || typeof absolute !== 'string' || !absolute.startsWith(`${base}/`)) return undefined;
+  return relativeReference(absolute.slice(base.length + 1), kind);
+}
+
+/** Parse a `dsh-resource://file/session/<id>/<path>` address into its session and relative path. */
+export function parseFileAddress(address) {
+  const prefix = 'dsh-resource://file/';
+  if (typeof address !== 'string' || !address.startsWith(prefix)) return undefined;
+  const end = address.search(/[?#]/);
+  const parts = address.slice(prefix.length, end === -1 ? undefined : end).split('/');
+  if (parts[0] !== 'session' || !parts[1]) return undefined;
+  try {
+    return { sessionId: decodeURIComponent(parts[1]), path: parts.slice(2).map(decodeURIComponent).join('/') };
+  } catch { return undefined; }
+}
+
+export const parentPath = path => path.replace(/\/+$/, '').replace(/\/[^/]*$/, '') || '/';
+export const baseName = path => path.replace(/\/+$/, '').split('/').at(-1) || path;
+export const joinPath = (directory, name) => `${directory.replace(/\/+$/, '')}/${name}`;
+
+/** Same rule the host enforces for a single path component. */
+export function nameProblem(name, siblings = []) {
+  if (!name) return '名称不能为空。';
+  if (name === '.' || name === '..' || /[/\\\u0000-\u001f\u007f]/u.test(name)) return '名称不能包含 / \\ 或控制字符。';
+  if (encodeURIComponent(name).replace(/%[0-9A-F]{2}/g, 'x').length > 255) return '名称过长（最多 255 字节）。';
+  if (siblings.includes(name)) return '同名文件或文件夹已存在。';
+  return '';
+}
+
+export function formatBytes(value) {
+  if (!Number.isFinite(value)) return '';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = value, unit = 0;
+  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit++; }
+  return `${unit ? size.toFixed(size >= 100 ? 0 : 1) : size} ${units[unit]}`;
+}
+
+/** Drop-target directory for a tree row: itself when a folder, otherwise its parent; blank space means the root. */
+export function dropDirectory(root, row) {
+  if (!row) return root;
+  return row.kind === 'directory' ? row.path : parentPath(row.path);
+}

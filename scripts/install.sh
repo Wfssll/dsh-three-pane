@@ -4,7 +4,7 @@ set -euo pipefail
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE="${1:-web}"
 ACTION="${2:-install}"
-ARCHIVE="$PROJECT_DIR/dist/dsh-three-pane-0.3.0.tgz"
+ARCHIVE="$PROJECT_DIR/dist/dsh-three-pane-0.5.1.tgz"
 APP='/Applications/DeepSeek Harness.app/Contents'
 
 if [[ "$PROFILE" == 'desktop' ]]; then

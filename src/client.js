@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { createProjection, filesWidth, paneWidths, createFilesControl } from './model.js';
+import { mountFileTools } from './files.js';
 
 export const name = 'dsh-three-pane-client';
 export const inject = ['slots', 'sidebarRight'];
@@ -258,12 +259,88 @@ function NativeFilesLeft({ NativeSeat, sidebar, control, ...props }) {
     })), center));
 }
 
+
+// The remote @ index is built below the caret. Once it settles, re-run the
+// open menu so deeper matches appear without closing and reopening @.
+function mountReferenceRefresh(scope, sidebar) {
+  let polling = false, handled = false, timer;
+  const menuOpen = () => document.querySelector('[data-trigger-menu]');
+  const sessionId = () => sidebar.mounted.getSnapshot();
+  const controllerFor = id => {
+    try {
+      const actx = scope.sessions?.scope?.(id);
+      return actx ? scope.inputTriggers?.sessionOf?.(actx) : undefined;
+    } catch { return undefined; }
+  };
+  const refresh = id => { try { controllerFor(id)?.refreshOpenMenu?.(); } catch { /* menu already gone */ } };
+  const status = async id => {
+    const response = await fetch(`/api/dsh-files/refsStatus?${new URLSearchParams({ sessionId: id })}`, { credentials: 'same-origin' });
+    if (!response.ok) return undefined;
+    return response.json();
+  };
+  const poll = async id => {
+    if (polling) return;
+    polling = true;
+    let attempts = 0;
+    const tick = async () => {
+      if (!menuOpen()) { polling = false; return; }
+      let current;
+      try { current = await status(id); } catch { current = undefined; }
+      if (!current || current.kind !== 'ssh') { polling = false; return; }
+      if (current.state === 'ready' || current.state === 'error' || attempts >= 20) {
+        if (current.count > 0) refresh(id);
+        polling = false; return;
+      }
+      attempts += 1;
+      timer = setTimeout(tick, attempts < 4 ? 250 : 500);
+    };
+    tick();
+  };
+  const kick = () => {
+    if (!menuOpen()) { handled = false; return; }
+    if (handled) return;
+    const id = sessionId();
+    if (!id) return;
+    handled = true;
+    poll(id);
+  };
+  const onInput = () => { handled = false; kick(); };
+  document.addEventListener('input', onInput, true);
+  document.addEventListener('focusin', kick, true);
+  document.addEventListener('keydown', kick, true);
+  // The menu can mount after the input event; watch for it so the first @ in a
+  // remote workspace still gets the refresh when its index settles.
+  const observer = typeof MutationObserver === 'function' ? new MutationObserver(() => {
+    if (!menuOpen()) { handled = false; return; }
+    if (!handled) kick();
+  }) : undefined;
+  observer?.observe(document.body, { childList: true, subtree: true });
+  return () => {
+    observer?.disconnect();
+    document.removeEventListener('input', onInput, true);
+    document.removeEventListener('focusin', kick, true);
+    document.removeEventListener('keydown', kick, true);
+    clearTimeout(timer);
+    polling = false;
+  };
+}
+
 export function apply(ctx) {
   const control = createFilesControl();
   ctx.effect(() => ctx.sidebarRight.mounted.subscribe(control.pulse));
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay', id: 'dsh-three-pane.files-toggle', inject: () => ({ control, sidebar: ctx.sidebarRight }),
   }, FilesToggle)));
+  // File tree tools need the session and composer services; without them the layout still works.
+  ctx.effect(() => {
+    const fiber = ctx.inject?.(['sessions', 'conversation', 'sidebarRight'], scope => mountFileTools(scope));
+    return () => fiber?.dispose?.();
+  });
+  // Optional: refresh an open @ menu when the background remote index settles.
+  ctx.effect(() => {
+    const fiber = ctx.inject?.(['inputTriggers', 'sessions'], scope => mountReferenceRefresh(scope, ctx.sidebarRight));
+    return () => fiber?.dispose?.();
+  });
   ctx.effect(() => {
     const style = document.createElement('style');
     style.dataset.plugin = 'dsh-three-pane'; style.textContent = CSS;
